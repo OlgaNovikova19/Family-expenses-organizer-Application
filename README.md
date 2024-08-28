@@ -6,6 +6,8 @@
 
 ![ShareX_YrVle7Nj6b](https://github.com/user-attachments/assets/ae278256-492d-407c-926e-ac5fa7c07132)
 
+![flet_QR7FHyswck](https://github.com/user-attachments/assets/2d69408c-46c5-4ca1-93ea-975ed81ba66b)
+
 
 Application that has following functionality:
 1) Selecting the category of expenses
