@@ -112,3 +112,14 @@ def date_picker_creation(page:ft.Page)->ft.Control:
         )
     return pick_date_in_calendar
 
+def create_error_message(page:ft.Page)->None:
+    alert_dialog = ft.AlertDialog(title=ft.Text('Something went wrong...Try once again'), bgcolor=ft.colors.RED_100)
+    page.open(alert_dialog)
+    page.update()
+
+def create_individual_error_message(page:ft.Page, message:str)->None:
+    page.open(ft.AlertDialog(title=ft.Text(message, text_align=ft.TextAlign.CENTER), bgcolor=ft.colors.RED_100))
+    page.update()
+
+
+

@@ -13,7 +13,7 @@ import view_sign_up
 import app_bar
 import time
 from fabrique_controls import date_picker_creation
-from  expenses_input import basic_menu_creation
+from expenses_input import basic_menu_creation
 
 
 def main(page: ft.Page):
@@ -59,9 +59,16 @@ def main(page: ft.Page):
         view_goals.show_warning_for_user_if_needed(get_user(), page)
 
     def show_sum_left_before_warning_sum(e):
-        print("User from identification data from function: %s." % get_user())
-        sum_left_before_warning_sum = expenses_diary.get_sum_left_to_spend_without_warning_for_user(get_user())
-        page.open(ft.AlertDialog(title=ft.Text(f'{get_user()}, you can freely spend {sum_left_before_warning_sum} rubbles'), bgcolor=ft.colors.GREEN_200))
+        name_user = get_user()
+        information = ''
+        if name_user is None:
+            name_user = 'guest'
+            information = 'please sign in to use this function.'
+        if expenses_diary.check_active_limits_for_user(get_user()):
+            sum_left_before_warning_sum = expenses_diary.get_sum_left_to_spend_without_warning_for_user(get_user())
+            if sum_left_before_warning_sum is None:
+                information = 'you have set no warning sum.'
+        page.open(ft.AlertDialog(title=ft.Text(f'Dear {name_user}, {information}'), bgcolor=ft.colors.GREEN_200))
 
     goals_icon_button = ft.IconButton(ft.icons.ADJUST, tooltip="Goals", on_click=open_view_goals, data=0)
     wallet_icon_button = ft.IconButton(ft.icons.HOME_REPAIR_SERVICE, tooltip="Sum you can still safely spend", on_click=show_sum_left_before_warning_sum)

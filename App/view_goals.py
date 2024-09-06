@@ -166,6 +166,7 @@ def view_goals_create_layout(page: ft.Page):
                         expenses_diary.set_warning_sum_in_active_limit_for_user(text_field_input_warning_sum.value, get_user())
                         page.views[-1].controls.append(ft.Text("The warning sum that will be used for warning creation is recorded"))
                         page.update()
+                        end_actions()
                         #####here deleted about check
                     text_field_input_warning_sum.disabled = True
                     print(text_field_input_warning_sum.value, 'warning sum')
@@ -394,7 +395,17 @@ def create_warning(identified_user):
 
 def show_warning_for_user_if_needed(identified_user_login, page:ft.Page):
     warning_for_user = create_warning(identified_user_login)
-    if warning_for_user:
-        page.open(ft.AlertDialog(title=ft.Text(f'{warning_for_user}'), bgcolor=ft.colors.RED_100))
+    information = ''
+    if identified_user_login is None:
+        information = 'please sign in to follow warnings.'
+        identified_user_login = 'guest'
+    else:
+        if warning_for_user:
+            information = warning_for_user
+        else:
+            information = 'no warnings for you.'
+    page.open(ft.AlertDialog(title=ft.Text(f'Dear {identified_user_login}, {information}', text_align=ft.TextAlign.CENTER),
+            bgcolor=ft.colors.RED_100))
+
     page.update()
 

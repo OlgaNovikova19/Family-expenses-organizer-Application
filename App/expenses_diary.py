@@ -398,6 +398,21 @@ def get_active_limit_start_date_for_user(identified_user):
         return limit_start[0]
     return
 
+def get_active_sum_limit_for_user(identified_user):
+    check_response = check_active_limits_for_user(identified_user)
+    if check_response:
+        conn1 = sqlite3.connect('finance.db')
+        c1 = conn1.cursor()
+        c1.execute(
+            "SELECT sum_limit FROM limits WHERE login = ? AND history = 0 ORDER BY limit_start_date DESC LIMIT 1",
+            (identified_user,)
+        )
+        received_sum_limit = c1.fetchone()[0]
+        conn1.close()
+        print(received_sum_limit, 'sum_limit')
+        return received_sum_limit
+    return
+
 
 def get_active_limit_end_date_for_user(identified_user):
     check_response = check_active_limits_for_user(identified_user)
@@ -459,17 +474,61 @@ def check_user_for_login(passed_login):
     else:
         return False
 
+def check_password_for_login(passed_login, passed_password):
+    create_db_finance()
+    conn = sqlite3.connect('finance.db')
+    c = conn.cursor()
+    c.execute(
+        """SELECT *
+           FROM users 
+           WHERE login = ? AND password = ?""",
+        (passed_login, passed_password)
+    )
+    user_data = c.fetchall()
+    conn.close()
+    if user_data:
+        return True
+    else:
+        return False
+
 
 def set_balance_for_user(new_balance, login):
     if check_user_for_login(login):
         conn = sqlite3.connect('finance.db')
         c = conn.cursor()
         c.execute(
-            """"UPDATE users SET spare_balance = ? WHERE id = ?""",
+            """"UPDATE users SET spare_balance = ? WHERE login = ?""",
             (new_balance, login)
         )
         conn.commit()
         conn.close()
+    return
+
+def set_subjective_success_rate_for_user(subjective_success_rate_value, login):
+    if check_user_for_login(login):
+        conn = sqlite3.connect('finance.db')
+        c = conn.cursor()
+        c.execute(
+            """UPDATE expenses SET subjective_success_rate = ? WHERE id = (SELECT id FROM expenses WHERE login = ?
+            ORDER BY id DESC LIMIT 1)""",
+            (subjective_success_rate_value, login)
+        )
+        conn.commit()
+        conn.close()
+    return
+
+def get_subjective_success_rate_for_user(login):
+    if check_user_for_login(login):
+        conn = sqlite3.connect('finance.db')
+        c = conn.cursor()
+        c.execute(
+            """SELECT subjective_success_rate FROM expenses WHERE login = ? ORDER BY id DESC LIMIT 1""",
+            (login,)
+        )
+        received_subjective_success_rate_for_user = c.fetchone()[0]
+        conn.commit()
+        conn.close()
+        return received_subjective_success_rate_for_user
     return
 
 

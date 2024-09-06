@@ -10,7 +10,8 @@ from identification_data import get_user
 import view_goals
 import view_sign_up
 import time
-from fabrique_controls import date_picker_creation
+from fabrique_controls import date_picker_creation, create_error_message
+
 
 
 def basic_menu_creation(page: ft.Page):
@@ -37,8 +38,9 @@ def basic_menu_creation(page: ft.Page):
 
         cheer_up_text = ft.Text(chosen_random_cheer_up_message, italic=True, weight=ft.FontWeight.BOLD,
                                 font_family="Consolas", size=20)
+        cheer_up_text_row=ft.Row([cheer_up_text], alignment=ft.MainAxisAlignment.CENTER)
 
-        page.views[-1].controls.append(cheer_up_text)
+        page.views[-1].controls.append(cheer_up_text_row)
         page.update()
         return cheer_up_text
 
@@ -55,11 +57,13 @@ def basic_menu_creation(page: ft.Page):
             sum_money_text_field.prefix_text = "We have spent..."
             sum_money_text_field.suffix_text = 'rubbles'
             sum_money_text_field.hint_text = ''
+            add_button.disabled = False
             page.update()
 
         def submit_sum_money_text_field(e):
             sum_money_text_field.disabled = True
-            cheer_up_after_asking_sum()
+            add_button.disabled = False
+            #cheer_up_after_asking_sum()
             page.update()
 
         sum_money_text_field = ft.TextField(label="Sum of money spent",
@@ -105,34 +109,78 @@ def basic_menu_creation(page: ft.Page):
             view_goals.show_warning_for_user_if_needed(get_user(), page)
 
         def add_button_clicked(e):
-            nonlocal row_sum_input
             row_sum_input.clean()
-            row_sum_input = ft.Row(controls=[spent_icon, sum_money_text_field, spent_icon])
-            page.add(row_sum_input)
-            page.views[-1].controls.append(row_sum_input)
-            # row_sum_input.visible = False
-            text_thanks_information_added = ft.Text("Thanks. Information about expenses added.")
-            row_expense_added_information = ft.Row([spent_icon, text_thanks_information_added, spent_icon])
-            # page.add(text_thanks_information_added )
-            page.add(row_expense_added_information)
-            # page.views[-1].controls.append(text_thanks_information_added)
-            page.views[-1].controls.append(row_expense_added_information)
             page.update()
+            row_sum_input.controls = [spent_icon, sum_money_text_field, spent_icon]
+            page.update()
+
+            row_text_thanks_information_added = ft.Row([ft.Text("Thanks. Information about expenses added.")], alignment=ft.MainAxisAlignment.CENTER)
+
+            page.views[-1].controls.append(row_text_thanks_information_added)
+
+            print(row_text_thanks_information_added)
+            print(page.views[-1].controls)
+            page.update()
+            calendar_elev_button.visible = False
+            row_sum_input.visible = False
+            main_category_selection.visible = False
+            add_button.visible = False
+            page.update()
+            cheer_up_text = cheer_up_after_asking_sum()
+            page.update()
+            time.sleep(4)
+            row_text_thanks_information_added.visible=False
+            cheer_up_text.visible=False
 
             add_expense_to_db()
 
-        add_button = ft.ElevatedButton('ADD in EXPENSES DIARY', on_click=add_button_clicked)
+            def yes_button_clicked(e):
+                row_text1_information.visible = False
+                row_text2_question.visible = False
+                page.update()
+                create_text_before_slider()
+                create_slider_subjective_estimation_expense()
+                page.update()
+
+
+
+
+            def no_button_clicked(e):
+                row_text1_information.visible = False
+                row_text2_question.visible = False
+                page.update()
+
+            yes_button = ft.ElevatedButton("Yes", bgcolor=ft.colors.AMBER_200, on_click=yes_button_clicked)
+            no_button = ft.ElevatedButton("No", bgcolor=ft.colors.AMBER_200, on_click=no_button_clicked)
+            row_text1_information = ft.Row([ft.Text(
+                "To get further valuable insights about your habitual spending patterns leave your subjective estimation of your recent expense.", italic=True, size=20, weight=ft.FontWeight.W_400)],
+                alignment=ft.MainAxisAlignment.CENTER)
+            row_text2_question = ft.Row([yes_button, ft.Text("Would you like to participate?", italic=True, size=20, weight=ft.FontWeight.BOLD), no_button], alignment=ft.MainAxisAlignment.CENTER)
+
+            page.views[-1].controls.append(row_text1_information)
+            page.views[-1].controls.append(row_text2_question)
+            page.update()
+
+
+
+
+
+
+
+        add_button = ft.ElevatedButton('ADD in EXPENSES DIARY', on_click=add_button_clicked, disabled=True)
         page.add(add_button)
         return add_button
 
     def create_text_before_slider() -> ft.Control:
-        text_before_slider = ft.Text(
-            "Please select the level of your certainty that you are go_ing to fulfill your spare goals",
-            size=20, weight=ft.FontWeight.BOLD)
-        page.add(text_before_slider)
-        page.views[-1].controls.append(text_before_slider)
+        instruct_before_slider = ft.Text(
+            "Please select the level of your certainty whether you are going to fulfill your spare goals", italic=True,
+            size=20, weight=ft.FontWeight.W_500)
+        row_instruct_before_slider = ft.Row([instruct_before_slider], alignment=ft.MainAxisAlignment.CENTER)
+        page.views[-1].controls.append(row_instruct_before_slider)
         page.update()
-        return text_before_slider
+        return row_instruct_before_slider
+
+    row_instruct_before_slider = create_text_before_slider()
 
     def create_slider_subjective_estimation_expense() -> ft.Control:
         slider = ft.RangeSlider(min=0,
@@ -145,25 +193,74 @@ def basic_menu_creation(page: ft.Page):
                                 overlay_color=ft.colors.GREEN_100,
                                 label="{value}%",
                                 )
-        page.add(slider)
+        def save_button_clicked(e):
+            print(slider.end_value)
+            print(type(slider.end_value))
+            if get_user() is None:
+                page.open(
+                    ft.AlertDialog(title=ft.Text('Dear guest, please, sign in to save results'), bgcolor=ft.colors.RED_100))
+                page.update()
+            else:
+                print(get_user())
+                expenses_diary.set_subjective_success_rate_for_user(slider.end_value, get_user())
+                if expenses_diary.get_subjective_success_rate_for_user(get_user()) is None or expenses_diary.get_subjective_success_rate_for_user(get_user()) != slider.end_value:
+                    create_error_message(page)
+                else:
+                    row_estimation_saved = ft.Row([ft.Text("Your estimation is added", italic=True, size=20, weight=ft.FontWeight.W_500)],
+                                                  alignment=ft.MainAxisAlignment.CENTER)
+                    page.views[-1].controls.append(row_estimation_saved)
+                    save_slider_value_button.disabled = True
+                    page.update()
+                    time.sleep(5)
+                    """print('route')
+                    page.go('/')
+                    page.go('/app')"""
+                    page.update()
+                    page.update()
+                    page.open(ft.AlertDialog(title=ft.Text("More expenses?", text_align=ft.TextAlign.CENTER),
+                                             bgcolor=ft.colors.GREEN_200))
+                    time.sleep(3)
+                    page.go('/')
+                    page.go('/app')
+                    page.update()
+
+        save_slider_value_button = ft.ElevatedButton("SAVE", bgcolor=ft.colors.AMBER_200, on_click=save_button_clicked)
+        row_save_slider_value_button = ft.Row([save_slider_value_button], alignment = ft.MainAxisAlignment.CENTER)
         page.views[-1].controls.append(slider)
+        page.update()
+        page.views[-1].controls.append(row_save_slider_value_button)
         page.update()
         return slider
 
-    def create_main_category_selection() -> ft.Control:
-        count = 0
-        def on_click_sum_input(e):
-            print(main_category_selection.value)
 
-            nonlocal count
-            print(count)
-            if e.control.key is None:
-                count += 1
-                if count >= 1:
-                    e.control.visible = False
+    def if_more_expenses_input():
+       """
+        text.visible = False
+        slider_control.visible = False
+        page.update()
+        create_calendar_button()
+        create_sum_money_text_field()
+        create_add_button()
+        page.update()"""
+
+
+    def create_main_category_selection() -> ft.Control:
+        count_click_extra_category = 0
+        a = None
+        def on_click_sum_input(e):
+            if e.control.key is not None and a is not None:
+                a.disabled = True
+                print(a.disabled)
+                print(a.value,'a.value a not None, e.control.key not None')
+                print(e.control.key, 'e.control.key not None, a not None')
+            print(e.control.key, 'e.control.key')
+            print(a, 'a')
             page.update()
 
+
+
         def click_category_entertainment(e):
+            nonlocal count_click_extra_category
 
             extra_category_entertainment = ft.Dropdown(label="Subcategory of Entertainment",
                                                        hint_text="Select subcategory of expenses for entertainment",
@@ -171,17 +268,26 @@ def basic_menu_creation(page: ft.Page):
                                                                 ft.dropdown.Option("Netflix"),
                                                                 ft.dropdown.Option("Videogames")
                                                                 ],
-                                                       on_click=on_click_sum_input)
 
-            c = ft.Column(controls=[extra_category_entertainment])
+                                                  on_click=on_click_sum_input)
+            nonlocal a
+            a = extra_category_entertainment
+            if count_click_extra_category >=1:
+                page.views[-1].controls.pop()
+                count_click_extra_category = 0
+
+
+            #c = ft.Column(controls=[extra_category_entertainment])
             #page.add(ft.Column(controls=[extra_category_entertainment]))
-            page.add(c)
+            current_subcategory_dropdown = extra_category_entertainment
+            #page.add(c)
             #page.views[-1].controls.append(extra_category_entertainment)
-            page.views[-1].controls.append(c)
-
+            page.views[-1].controls.append(extra_category_entertainment)
+            count_click_extra_category += 1
             page.update()
 
         def click_category_purchases(e):
+            nonlocal count_click_extra_category
             extra_category_purchases = ft.Dropdown(label="Subcategory of Purchases",
                                                    hint_text="Select subcategory of expenses for purchases",
                                                    options=[ft.dropdown.Option("Clothes"),
@@ -192,10 +298,16 @@ def basic_menu_creation(page: ft.Page):
                                                             ],
                                                    on_click=on_click_sum_input
                                                    )
+            if count_click_extra_category >=1:
+                page.views[-1].controls.pop()
+                count_click_extra_category = 0
+                page.update()
+                return
 
-            page.add(ft.Column(controls=[extra_category_purchases]))
+
+            #page.add(ft.Column(controls=[extra_category_purchases]))
             page.views[-1].controls.append(extra_category_purchases)
-
+            count_click_extra_category += 1
             page.update()
 
         main_category_selection = ft.Dropdown(label="Category of expenses", hint_text="Select category of expenses",
@@ -220,7 +332,8 @@ def basic_menu_creation(page: ft.Page):
                                                                           on_click=click_category_purchases),
                                                        ft.dropdown.Option("Other", on_click=on_click_sum_input)
                                                        ]
-                                              )
+
+                                             )
         return main_category_selection
 
     calendar_elev_button = create_calendar_button()
@@ -230,6 +343,7 @@ def basic_menu_creation(page: ft.Page):
     main_category_selection_col = ft.Column(controls=[main_category_selection])
     row_basic_menu = ft.Row([calendar_elev_button, main_category_selection_col, row_sum_input, add_button],
                             alignment=ft.MainAxisAlignment.SPACE_AROUND)
-    page.add(row_basic_menu)
+
     page.views[-1].controls.append(row_basic_menu)
+    page.update()
     return row_basic_menu
