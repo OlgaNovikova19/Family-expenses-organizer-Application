@@ -6,27 +6,15 @@ import calendar
 import view_sign_in_sign_up_selection
 from view_sign_in import view_sign_in_layout_creation
 from view_goals import view_goals_create_layout
-from identification_data import get_user
+from identification_data import get_user, set_chosen_date, get_chosen_date
 import view_goals
 import view_sign_up
 import time
-from fabrique_controls import date_picker_creation, create_error_message
+from fabrique_controls import create_error_message, create_calendar_button
 
 
 
 def basic_menu_creation(page: ft.Page):
-    def create_calendar_button() -> ft.Control:
-
-        calendar_elev_button = ft.ElevatedButton(
-            "Select date",
-            icon=ft.icons.CALENDAR_MONTH,
-            bgcolor=ft.colors.AMBER_200,
-            on_click=lambda e: page.open(
-                date_picker_creation(page)
-            )
-        )
-        page.add(calendar_elev_button)
-        return calendar_elev_button
 
     def cheer_up_after_asking_sum() -> ft.Control:
         text1 = "Expenses are an essential part of life, chin up!"
@@ -87,17 +75,18 @@ def basic_menu_creation(page: ft.Page):
 
     def create_add_button() -> ft.Control:
         def add_expense_to_db():
-            expense_date = date_picker_creation(page).value
-            print(expense_date, 'expense_date')
+            expense_date = get_chosen_date()
+
             if not expense_date:
                 expense_date = datetime.datetime.today().strftime('%Y-%m-%d')
-                print(expense_date, "transformed")
-            else:
-                expense_date = date_picker_creation(page).value.strftime('%Y-%m-%d')
+                print(expense_date, "exp")
+
+
+
             sum_expense = sum_money_text_field.value
             ####
             # e.control.value.strftime
-            print(date_picker_creation(page).value)
+
             ###
             expense_category = main_category_selection.value
             expense_subcategory = None
@@ -107,6 +96,12 @@ def basic_menu_creation(page: ft.Page):
             expenses_diary.add_expense(identified_user, expense_date, sum_expense, expense_category,
                                        expense_subcategory, subjective_success_rate)
             view_goals.show_warning_for_user_if_needed(get_user(), page)
+            history_limit_sum = expenses_diary.get_limit_sum_for_date_for_user_if_history(identified_user, expense_date)
+            print(history_limit_sum, "history_limit_sum")
+            if history_limit_sum is not None:
+                diff_limit_expense = history_limit_sum - float(sum_expense)
+                expenses_diary.update_balance_for_user(diff_limit_expense, identified_user)
+                print(diff_limit_expense, 'diff_limit_expense')
 
         def add_button_clicked(e):
             row_sum_input.clean()
@@ -133,6 +128,7 @@ def basic_menu_creation(page: ft.Page):
             cheer_up_text.visible=False
 
             add_expense_to_db()
+            view_goals.create_warning(get_user())
 
             def yes_button_clicked(e):
                 row_text1_information.visible = False
@@ -143,11 +139,15 @@ def basic_menu_creation(page: ft.Page):
                 page.update()
 
 
-
-
             def no_button_clicked(e):
                 row_text1_information.visible = False
                 row_text2_question.visible = False
+                page.update()
+                page.open(ft.AlertDialog(title=ft.Text("More expenses?..Here we go!", text_align=ft.TextAlign.CENTER),
+                                         bgcolor=ft.colors.GREEN_200))
+                time.sleep(3)
+                page.go('/')
+                page.go('/app')
                 page.update()
 
             yes_button = ft.ElevatedButton("Yes", bgcolor=ft.colors.AMBER_200, on_click=yes_button_clicked)
@@ -160,10 +160,6 @@ def basic_menu_creation(page: ft.Page):
             page.views[-1].controls.append(row_text1_information)
             page.views[-1].controls.append(row_text2_question)
             page.update()
-
-
-
-
 
 
 
@@ -217,7 +213,7 @@ def basic_menu_creation(page: ft.Page):
                     page.go('/app')"""
                     page.update()
                     page.update()
-                    page.open(ft.AlertDialog(title=ft.Text("More expenses?", text_align=ft.TextAlign.CENTER),
+                    page.open(ft.AlertDialog(title=ft.Text("More expenses?..Here we go!", text_align=ft.TextAlign.CENTER),
                                              bgcolor=ft.colors.GREEN_200))
                     time.sleep(3)
                     page.go('/')
@@ -336,9 +332,10 @@ def basic_menu_creation(page: ft.Page):
                                              )
         return main_category_selection
 
-    calendar_elev_button = create_calendar_button()
+
     main_category_selection = create_main_category_selection()
     add_button = create_add_button()
+    calendar_elev_button = create_calendar_button(page)
 
     main_category_selection_col = ft.Column(controls=[main_category_selection])
     row_basic_menu = ft.Row([calendar_elev_button, main_category_selection_col, row_sum_input, add_button],

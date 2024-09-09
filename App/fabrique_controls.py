@@ -1,5 +1,6 @@
 import flet as ft
 import datetime
+from identification_data import get_chosen_date, set_chosen_date
 
 def create_sum_input_unit(page:ft.Page):
     def focus_text_field_input_sum(e):
@@ -100,16 +101,27 @@ def create_sum_input_unit(page:ft.Page):
     return sum_input_unit
 
 def date_picker_creation(page:ft.Page)->ft.Control:
+    selected_date = None
+
     def choose_date(e):
+        nonlocal selected_date
         str_selected_date = e.control.value.strftime('%Y-%m-%d')
         page.add(ft.Text(f"Date selected: {str_selected_date}"))
         page.add(ft.TextButton(f"{str_selected_date}"))
+        print(str_selected_date, 'str_selected_date')
+        print(e.control.data, 'data..')
+        e.control.data = str_selected_date
+        selected_date = str_selected_date
+        page.update()
+
 
     pick_date_in_calendar = ft.DatePicker(
         first_date=datetime.datetime(year=2023, month=10, day=1),
         last_date=datetime.datetime(year=2025, month=10, day=1),
+        data = selected_date,
         on_change=choose_date
         )
+    print (selected_date, 'sel.date')
     return pick_date_in_calendar
 
 def create_error_message(page:ft.Page)->None:
@@ -120,6 +132,34 @@ def create_error_message(page:ft.Page)->None:
 def create_individual_error_message(page:ft.Page, message:str)->None:
     page.open(ft.AlertDialog(title=ft.Text(message, text_align=ft.TextAlign.CENTER), bgcolor=ft.colors.RED_100))
     page.update()
+
+def create_calendar_button(page:ft.Page) -> ft.Control:
+    def choose_date(e):
+            str_selected_date = e.control.value.strftime('%Y-%m-%d')
+            page.add(ft.Text(f"Date selected: {str_selected_date}"))
+            page.add(ft.TextButton(f"{str_selected_date}"))
+            print(str_selected_date, 'str_selected_date')
+            print(e.control.data, 'data..')
+            set_chosen_date(str_selected_date)
+            print(get_chosen_date(), 'ch.date')
+            page.update()
+
+    pick_date_in_calendar = ft.DatePicker(
+            first_date=datetime.datetime(year=2023, month=10, day=1),
+            last_date=datetime.datetime(year=2025, month=10, day=1),
+            on_change=choose_date
+        )
+
+    calendar_elev_button = ft.ElevatedButton(
+            "Select date",
+            icon=ft.icons.CALENDAR_MONTH,
+            bgcolor=ft.colors.AMBER_200,
+            on_click=lambda e: page.open(
+                pick_date_in_calendar
+            )
+        )
+    page.add(calendar_elev_button)
+    return calendar_elev_button
 
 
 

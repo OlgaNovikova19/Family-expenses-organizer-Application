@@ -3,15 +3,11 @@ import flet as ft
 import expenses_diary
 import datetime
 from dateutil.relativedelta import relativedelta
-
-import identification_data
-from identification_data import get_user
-from fabrique_controls import create_sum_input_unit
-
+from identification_data import get_user, get_chosen_date, set_chosen_date
+from fabrique_controls import create_sum_input_unit, create_calendar_button, create_individual_error_message
 
 
 def view_goals_create_layout(page: ft.Page):
-
     appbar_goals = ft.AppBar(leading=ft.Icon(ft.icons.SAVINGS), leading_width=60,
                              title=ft.Text("Family expenses organizer"), bgcolor=ft.colors.SURFACE_VARIANT,
                              actions=[ft.IconButton(icon=ft.icons.ARROW_RIGHT,
@@ -22,7 +18,6 @@ def view_goals_create_layout(page: ft.Page):
     row_goals_header = ft.Row([text_goals_header], alignment=ft.MainAxisAlignment.CENTER)
 
     page.views[-1].controls.append(row_goals_header)
-
 
     def close_search_bar(e):
         text = f"{e.control.data}"
@@ -36,7 +31,7 @@ def view_goals_create_layout(page: ft.Page):
         divider_color=ft.colors.AMBER,
         bar_hint_text="Select period of time",
         view_hint_text="Choose a period of time from the suggestions",
-        width=500,
+        width=400,
         controls=[
             ft.ListTile(title=ft.Text(f"{i}"), on_click=close_search_bar, data=f"{i}")
             for i in periods_of_time
@@ -47,17 +42,21 @@ def view_goals_create_layout(page: ft.Page):
         "Open Search",
         on_click=lambda _: search_bar_period_of_time.open_view()), search_bar_period_of_time],
         horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+    calendar_button_goals = create_calendar_button(page)
+    calendar_button_goals.width = 400
 
     sum_input_plus_textfield_min_row = create_sum_input_unit(page)
     text_field_input_sum = sum_input_plus_textfield_min_row.controls[1]
+    text_field_input_sum.width = 250
     page.views[-1].controls.append(sum_input_plus_textfield_min_row)
     page.update()
 
     def convert_to_date(time_str):
         if not time_str.split():
             page.open(
-                ft.AlertDialog(title=ft.Text('For setting spare goal you should select period of time'), bgcolor=ft.colors.RED_100))
-            column_search_bar.disabled=False
+                ft.AlertDialog(title=ft.Text('For setting spare goal you should select period of time'),
+                               bgcolor=ft.colors.RED_100))
+            column_search_bar.disabled = False
             page.update()
             return
         else:
@@ -75,9 +74,15 @@ def view_goals_create_layout(page: ft.Page):
             else:
                 raise ValueError(f"Unknown time unit: {unit}")
 
-            future_date = datetime.date.today() + delta
+        date_selected_as_start_of_limit = datetime.datetime.strptime(get_chosen_date(), '%Y-%m-%d')
 
-            return future_date
+        if date_selected_as_start_of_limit is None:
+            date_selected_as_start_of_limit = datetime.date.today()
+        future_date = date_selected_as_start_of_limit + delta
+
+        print(future_date)
+
+        return future_date
 
     def save_sum_limit_button_clicked(e):
         if not search_bar_period_of_time.value or search_bar_period_of_time.value not in periods_of_time:
@@ -90,19 +95,7 @@ def view_goals_create_layout(page: ft.Page):
         else:
             column_search_bar.disabled = True
             sum_input_plus_textfield_min_row.disabled = True
-
-            check_response = expenses_diary.check_active_limits_for_user(get_user())
-            if check_response:
-                message_limit_already_exists = ft.Text(
-                    "You have already another active limit installed. Do you want to update your active limit?",  italic=True, weight=ft.FontWeight.BOLD,
-                                    font_family="Consolas", size=20)
-                row_message = ft.Row([message_limit_already_exists], alignment=ft.MainAxisAlignment.CENTER, vertical_alignment=ft.CrossAxisAlignment.START)
-                page.views[-1].controls.append(row_message)
-                page.update()
-                questions_if_limit_already_exists()
-
-            else:
-                set_new_limit()
+            set_new_limit()
 
     def questions_if_limit_already_exists():
         def clicked_change_checkbox(e):
@@ -112,11 +105,12 @@ def view_goals_create_layout(page: ft.Page):
                 if not check_limit_period_ended(get_user()):
                     # when replacing the last active limit with the new one if the end date of limit isn`t reached we won`t consider it for analysis.
                     # That`s why we use None for all parameters. history=1 is set automatically in make_limit_history_for_user function
-                    expenses_diary.make_limit_history_for_user(None, None, get_user())
+                    expenses_diary.make_limit_history_for_user(get_user(), None, None, None)
                 page.views[-1].controls.append(
                     ft.Text("OK, your previous active limit is replaced with a new one."))
                 page.update()
                 set_new_limit()
+                end_actions()
                 page.update()
 
             elif e.control == checkbox_2:
@@ -125,30 +119,26 @@ def view_goals_create_layout(page: ft.Page):
                 page.update()
                 page.views[-1].controls.append(
                     ft.Text("OK, setting of the new active limit is canceled. Your previous limit is active."))
-                end_actions()
+                end_actions_variant_cancel_setting_new_limit()
                 page.update()
 
-
-
-        checkbox_1 = ft.Checkbox(adaptive=True, label="Replace previous active limit with the new one", value=False, shape=ft.RoundedRectangleBorder(10), on_change=clicked_change_checkbox)
+        checkbox_1 = ft.Checkbox(adaptive=True, label="Replace previous active limit with the new one", value=False,
+                                 shape=ft.RoundedRectangleBorder(10), on_change=clicked_change_checkbox)
         checkbox_2 = ft.Checkbox(adaptive=True,
                                  label="Cancel setting of the new active limit. I want to use already existing limit",
-                                 value=False,  shape=ft.RoundedRectangleBorder(10), on_change=clicked_change_checkbox)
+                                 value=False, shape=ft.RoundedRectangleBorder(10), on_change=clicked_change_checkbox)
         col_checkboxes_if_limit_already_exists = ft.Column([checkbox_1, checkbox_2])
-
 
         page.views[-1].controls.append(col_checkboxes_if_limit_already_exists)
         page.update()
 
-
-
-   #########
-
+    #########
 
     def ask_set_warning_sum():
         def clicked_yes_no_set_warning_sum(e):
             if e.control == checkbox_yes:
                 checkbox_no.disabled = True
+                checkbox_yes.disabled = True
                 input_warning_sum_row = create_sum_input_unit(page)
                 text_field_input_warning_sum = input_warning_sum_row.controls[1]
                 text_field_input_warning_sum.value = "Warning sum"
@@ -163,38 +153,43 @@ def view_goals_create_layout(page: ft.Page):
                         print('open condition')
                         actions_if_warning_sum_more_or_equal_than_limit(text_field_input_warning_sum)
                     else:
-                        expenses_diary.set_warning_sum_in_active_limit_for_user(text_field_input_warning_sum.value, get_user())
-                        page.views[-1].controls.append(ft.Text("The warning sum that will be used for warning creation is recorded"))
+                        expenses_diary.set_warning_sum_in_active_limit_for_user(text_field_input_warning_sum.value,
+                                                                                get_user())
+                        page.views[-1].controls.append(
+                            ft.Text("The warning sum that will be used for warning creation is recorded"))
                         page.update()
                         end_actions()
+                        checkbox_yes.disabled = True
+                        checkbox_no.disabled = True
                         #####here deleted about check
                     text_field_input_warning_sum.disabled = True
                     print(text_field_input_warning_sum.value, 'warning sum')
-                    wsum = expenses_diary.get_warning_sum_from_active_limit_for_user(identification_data.identified_user)
-                    print(wsum, 'wsum')
+
                 page.views[-1].controls.append(ft.ElevatedButton("Confirmation", on_click=confirmation_button_clicked))
                 page.update()
             else:
                 end_actions()
+                checkbox_yes.disabled = True
+                checkbox_no.disabled = True
 
-
-        text_ask_warning_sum = ft.Text("Do you want to specify the sum left till the end of limit to create a warning?",  italic=True, weight=ft.FontWeight.BOLD,
-                                font_family="Consolas", size=20)
+        text_ask_warning_sum = ft.Text("Do you want to specify the sum left till the end of limit to create a warning?",
+                                       italic=True, weight=ft.FontWeight.BOLD,
+                                       font_family="Consolas", size=20)
         checkbox_yes = ft.Checkbox(adaptive=True, label="Yes", value=False,
-                                 on_change=clicked_yes_no_set_warning_sum)
+                                   on_change=clicked_yes_no_set_warning_sum)
         checkbox_no = ft.Checkbox(adaptive=True,
-                                 label="No, I want to see a warning during all the period of limit being enabled",
-                                 value=False, on_change=clicked_yes_no_set_warning_sum)
+                                  label="No, I want to see a warning during all the period of limit being enabled",
+                                  value=False, on_change=clicked_yes_no_set_warning_sum)
         row_ask_warning_sum = ft.Row([checkbox_yes, checkbox_no])
         col_variants = ft.Column([text_ask_warning_sum, row_ask_warning_sum],
                                  horizontal_alignment=ft.CrossAxisAlignment.CENTER)
-
 
         page.views[-1].controls.append(col_variants)
         page.update()
 
     def actions_if_warning_sum_more_or_equal_than_limit(text_field_input_warning_sum):
         print('this')
+
         def clicked_yes_no_change_warning_sum(e):
             if e.control == checkbox_yes_change_warning_sum:
                 checkbox_yes_change_warning_sum.value = True
@@ -213,7 +208,7 @@ def view_goals_create_layout(page: ft.Page):
                     page.update()
 
             elif e.control == checkbox_no_change_warning_sum:
-                expenses_diary.set_warning_sum_in_active_limit_for_user(text_field_input_warning_sum.value, identified_user)
+                expenses_diary.set_warning_sum_in_active_limit_for_user(text_field_input_warning_sum.value, get_user())
                 checkbox_no_change_warning_sum.value = True
                 checkbox_yes_change_warning_sum.disabled = True
                 page.update()
@@ -226,31 +221,27 @@ def view_goals_create_layout(page: ft.Page):
                 end_actions()
 
         checkbox_yes_change_warning_sum = ft.Checkbox(adaptive=True,
-                                                          label="I want to change warning sum to make it lower than my set limit.",
-                                                          value=False,
-                                                          on_change=clicked_yes_no_change_warning_sum)
+                                                      label="I want to change warning sum to make it lower than my set limit.",
+                                                      value=False,
+                                                      on_change=clicked_yes_no_change_warning_sum)
         checkbox_no_change_warning_sum = ft.Checkbox(adaptive=True,
-                                                         label="No, I don`t want to change my warning sum. I want to see a warning right now",
-                                                         value=False, on_change=clicked_yes_no_change_warning_sum)
+                                                     label="No, I don`t want to change my warning sum. I want to see a warning right now",
+                                                     value=False, on_change=clicked_yes_no_change_warning_sum)
         row_ask_change_warning_sum = ft.Row([checkbox_yes_change_warning_sum, checkbox_no_change_warning_sum])
 
         dialog_modal = ft.AlertDialog(
-                modal=True,
-                title=ft.Text("The warning sum you have set is more than the limit itself."),
-                content=ft.Text("Do you want to change it? If not then the warning about reaching warning sum will "
-                                                   "be created right now and will be shown from this time on"),
-                actions=[row_ask_change_warning_sum],
-                actions_alignment=ft.MainAxisAlignment.END
-                )
+            modal=True,
+            title=ft.Text("The warning sum you have set is more than the limit itself."),
+            content=ft.Text("Do you want to change it? If not then the warning about reaching warning sum will "
+                            "be created right now and will be shown from this time on"),
+            actions=[row_ask_change_warning_sum],
+            actions_alignment=ft.MainAxisAlignment.END
+        )
 
         page.open(dialog_modal)
         page.update()
 
     ###########
-
-
-
-
 
     #######
 
@@ -266,29 +257,64 @@ def view_goals_create_layout(page: ft.Page):
                 unsuccessful_spare_goal = f"Your spare goal {start_date_limit}-{end_date_limit} wasn`t fulfilled. Difference is {limit_sum_for_user - real_expenses_during_limit_time}. Maybe next time better?!"
                 results.append(unsuccessful_spare_goal)
             print(success_spare_goal, unsuccessful_spare_goal)"""
+
     #####
 
     def set_new_limit():
-        today_date = datetime.datetime.today()
-        limit_future_date = convert_to_date(search_bar_period_of_time.value)
-        warning_sum = None
-        print(text_field_input_sum.value, 'save')
-        print(limit_future_date, 'save')
-        print(search_bar_period_of_time.value)
+        current_date = datetime.datetime.today().strftime('%Y-%m-%d')
+        if get_user() is None:
+            create_individual_error_message(page, 'Dear guest, please sign in to save your limit')
+        else:
+            chosen_start_day_limit = get_chosen_date()
+            if chosen_start_day_limit is None:
+                chosen_start_day_limit = current_date
+            limit_future_date = convert_to_date(search_bar_period_of_time.value)
+            limit_future_date = limit_future_date.strftime('%Y-%m-%d')
+            start_dates_all_limits = expenses_diary.get_all_limits_start_dates_for_user(get_user()) or []
+            end_dates_all_limits = expenses_diary.get_all_limits_end_dates_for_user(get_user()) or []
+            #check if limit with such dates already exists
+            if (chosen_start_day_limit,) in start_dates_all_limits and (limit_future_date,) in end_dates_all_limits:
+                column_search_bar.disabled = False
+                sum_input_plus_textfield_min_row.disabled = False
+                create_individual_error_message(page,
+                                                "Limit with such dates already exists. It won`t be saved once again.")
 
-        expenses_diary.add_active_limit(get_user(), today_date, limit_future_date, text_field_input_sum.value, warning_sum)
-        #######
-        create_warning(get_user())
-        #####
-        print(
-            f"Your new spare goal was added. Your expenses limit for {search_bar_period_of_time.value} is set to {text_field_input_sum.value}")
-        information_text = ft.Text(
-            f"Your new spare goal was added. Your expenses limit for {search_bar_period_of_time.value} is set to {text_field_input_sum.value} rubbles")
-        page.views[-1].controls.append(information_text)
-        page.update()
-        time.sleep(2)
-        ask_set_warning_sum()
-        page.update()
+                return
+            check_response = expenses_diary.check_active_limits_for_user(get_user())
+            if check_response:
+                message_limit_already_exists = ft.Text(
+                    "You have already another active limit installed. Do you want to update your active limit?",
+                    italic=True, weight=ft.FontWeight.BOLD,
+                    font_family="Consolas", size=20)
+                row_message = ft.Row([message_limit_already_exists], alignment=ft.MainAxisAlignment.CENTER,
+                                     vertical_alignment=ft.CrossAxisAlignment.START)
+                page.views[-1].controls.append(row_message)
+                page.update()
+                questions_if_limit_already_exists()
+                return
+
+            warning_sum = None
+            print(text_field_input_sum.value, 'save')
+            print(limit_future_date, 'save')
+            print(search_bar_period_of_time.value)
+            currency = expenses_diary.get_currency_for_user(get_user())
+            expenses_diary.add_active_limit(get_user(), chosen_start_day_limit, limit_future_date,
+                                            text_field_input_sum.value, warning_sum)
+            #######
+            create_warning(get_user())
+            #####
+            print(
+                f"Your new spare goal was added. Your expenses limit for {search_bar_period_of_time.value} from {chosen_start_day_limit} is set to {text_field_input_sum.value}")
+            information_text = ft.Text(
+                f"Your new spare goal was added. Your expenses limit for {search_bar_period_of_time.value} from {chosen_start_day_limit} is set to {text_field_input_sum.value} {currency}")
+            page.views[-1].controls.append(information_text)
+            page.update()
+            time.sleep(2)
+            if limit_future_date < current_date:
+                end_actions()
+                return
+            ask_set_warning_sum()
+            page.update()
 
     img_obj_ = ft.Image(
         src=f"fragment_pic.png",
@@ -300,8 +326,9 @@ def view_goals_create_layout(page: ft.Page):
     c = ft.Container(img_obj_, shape=ft.BoxShape.CIRCLE, border_radius=56, alignment=(ft.alignment.bottom_center))
     save_sum_limit_button = ft.ElevatedButton('ADD in EXPENSES DIARY', on_click=save_sum_limit_button_clicked)
 
-    row_search_bar_and_input_sum = ft.Row([column_search_bar, sum_input_plus_textfield_min_row],
-                                          alignment=ft.MainAxisAlignment.SPACE_AROUND, vertical_alignment=ft.CrossAxisAlignment.END)
+    row_search_bar_and_input_sum = ft.Row([calendar_button_goals, column_search_bar, sum_input_plus_textfield_min_row],
+                                          alignment=ft.MainAxisAlignment.SPACE_AROUND,
+                                          vertical_alignment=ft.CrossAxisAlignment.END)
     col_functional_goals_controls = ft.Column([row_search_bar_and_input_sum, save_sum_limit_button],
                                               horizontal_alignment=ft.CrossAxisAlignment.CENTER)
 
@@ -313,7 +340,7 @@ def view_goals_create_layout(page: ft.Page):
             page.update()
 
         def cancel_button_clicked(e):
-            expenses_diary.delete_last_active_limit_for_user(identified_user)
+            expenses_diary.delete_last_active_limit_for_user(get_user())
             column_search_bar.disabled = False
             sum_input_plus_textfield_min_row.disabled = False
             page.views[-1].controls.clear()
@@ -328,18 +355,32 @@ def view_goals_create_layout(page: ft.Page):
         page.views[-1].controls.append(row_end_buttons)
         page.update()
 
+    def end_actions_variant_cancel_setting_new_limit():
+        def close_button_clicked_(e):
+            close_button_cancel_var.disabled = True
+            page.views.pop()
+            page.update()
+
+        close_button_cancel_var = ft.ElevatedButton('Close and return to main page', on_click=close_button_clicked_)
+
+        row_end_buttons = ft.Row([close_button_cancel_var], ft.MainAxisAlignment.SPACE_AROUND)
+        page.views[-1].controls.append(row_end_buttons)
+        page.update()
+
     controls_goals = [appbar_goals, row_goals_header, col_functional_goals_controls, c]
 
-
     return controls_goals
+
 
 def check_limit_period_ended(identified_user):
     today = datetime.datetime.today()
     end_date_limit = expenses_diary.get_active_limit_end_date_for_user(identified_user)
+    end_date_limit = end_date_limit.split(" ")[0]
     if today > datetime.datetime.strptime(end_date_limit, '%Y-%m-%d'):
         return True
     else:
         return False
+
 
 def create_warning(identified_user):
     """
@@ -359,41 +400,80 @@ def create_warning(identified_user):
     limit_sum_for_user = expenses_diary.get_active_limit_sum_for_user(identified_user)
     if limit_sum_for_user is None:
         return
-    elif warning_sum_for_user is None:
-        sum_to_spend_without_warnings=limit_sum_for_user
-        #create a warning
     else:
-        sum_to_spend_without_warnings = limit_sum_for_user - warning_sum_for_user
+        if warning_sum_for_user is None:
+            sum_to_spend_beyond_warning = limit_sum_for_user
+            #create a warning
+        else:
+            if warning_sum_for_user > limit_sum_for_user:
+                sum_to_spend_beyond_warning = 0
+            else:
+                sum_to_spend_beyond_warning = limit_sum_for_user - warning_sum_for_user
     print(warning_sum_for_user, '!')
     print(limit_sum_for_user, "!!")
     start_date_limit = expenses_diary.get_active_limit_start_date_for_user(identified_user)
     end_date_limit = expenses_diary.get_active_limit_end_date_for_user(identified_user)
+    end_date_limit = end_date_limit.split(" ")[0]
     today_date = datetime.datetime.today()
+    print(start_date_limit, 'start_date_limit!')
+    print(end_date_limit, "end_date_limit!!")
+
+    real_expenses_during_limit_time = expenses_diary.get_sum_expenses_for_login_for_the_period(identified_user,
+                                                                                               start_date_limit,
+                                                                                               end_date_limit)
+
+    print(limit_sum_for_user, 'limit_sum_for_user')
+    print(real_expenses_during_limit_time, "real_expenses_during_limit_time")
+    if real_expenses_during_limit_time is None:
+        real_expenses_during_limit_time = 0
+    diff_limit_all_real_expenses = limit_sum_for_user - real_expenses_during_limit_time
 
     if check_limit_period_ended(identified_user):
+        print('limit period ended')
         # make limit history (history assign 1, count general_success_rate and general_subjective_success_rate fot this limit period
-        real_expenses_during_limit_time = expenses_diary.get_expenses_for_login_for_the_period(identified_user,
-                                                                                                   start_date_limit,
-                                                                                                   today_date)
+
         #diff_limit_all_real_expenses can be positive (positive general spare balance if positive when summed up with other values in this column) or negative (negative general spare balance).
-        # General spare balance helps to support motivation for sparing money beyond time when limits and set,
+        # General spare balance helps to support motivation for sparing money beyond time when limits are set,
         # it`s a link that connects periods with active spare goals and gives insights about general tendention
-        diff_limit_all_real_expenses = limit_sum_for_user - real_expenses_during_limit_time
-        general_subjective_success = expenses_diary.calculate_mean_subjective_success_rate(identified_user, start_date_limit, end_date_limit)
-        expenses_diary.make_limit_history_for_user(diff_limit_all_real_expenses, general_subjective_success, identified_user)
+        print(real_expenses_during_limit_time, 'real_expenses_during_period')
+        if expenses_diary.check_real_success_for_user(get_user()) is None:
+            real_success_rate = None
+        real_success_rate = (limit_sum_for_user + real_expenses_during_limit_time) * 100 / diff_limit_all_real_expenses
+        print(diff_limit_all_real_expenses, "diff_limit_all_real_expenses")
+        print(diff_limit_all_real_expenses, 'diff_limit_all_real_expenses')
+        print(real_success_rate, "real_success_rate")
+
+        general_subjective_success = expenses_diary.calculate_mean_subjective_success_rate(identified_user,
+                                                                                           start_date_limit,
+                                                                                           end_date_limit)
+        print(general_subjective_success, "general_subjective_success")
+        expenses_diary.make_limit_history_for_user(identified_user, diff_limit_all_real_expenses,
+                                                   general_subjective_success, real_success_rate)
 
     else:
-        expenses_in_the_period = expenses_diary.get_sum_expenses_for_login_for_the_period(identified_user, start_date_limit, today_date)
-
-
-        if sum_to_spend_without_warnings > expenses_in_the_period :
-            return
+        if diff_limit_all_real_expenses == 0:
+            text_warning = "you have just reached your limit, you can`t spend anymore at all according to your spare goal. You see this message as you have reached your warning sum"
+        elif diff_limit_all_real_expenses < 0:
+            text_warning = (
+                f"you have exceeded your set limit. You are beyond your set limit sum as much as {-(diff_limit_all_real_expenses)}."
+                f" This means that you have spent more than you have planned. What a pity...next time better!")
         else:
-            warning = f"WARNING! You approach your spending limit. The end date of your limit {end_date_limit} and you can spend {sum_to_spend_without_warnings - expenses_in_the_period} rubbles"
-            print(warning)
-            return warning
+            currency_selected = expenses_diary.get_currency_for_user(get_user())
+            text_warning1 = "You see this message as you have reached your warning sum."
+            text_warning2 = (
+                f" You can still spend {sum_to_spend_beyond_warning} {currency_selected} before reaching the limit."
+                f"The end date of your limit is {end_date_limit}. You still have chance to fulfill your spare goal.")
+            if warning_sum_for_user is None:
+                text_warning = text_warning2
+            else:
+                text_warning = text_warning1 + text_warning2
 
-def show_warning_for_user_if_needed(identified_user_login, page:ft.Page):
+        warning = f"WARNING! {text_warning}"
+        print(warning)
+        return warning
+
+
+def show_warning_for_user_if_needed(identified_user_login, page: ft.Page):
     warning_for_user = create_warning(identified_user_login)
     information = ''
     if identified_user_login is None:
@@ -404,8 +484,29 @@ def show_warning_for_user_if_needed(identified_user_login, page:ft.Page):
             information = warning_for_user
         else:
             information = 'no warnings for you.'
-    page.open(ft.AlertDialog(title=ft.Text(f'Dear {identified_user_login}, {information}', text_align=ft.TextAlign.CENTER),
-            bgcolor=ft.colors.RED_100))
+    page.open(
+        ft.AlertDialog(title=ft.Text(f'Dear {identified_user_login}, {information}', text_align=ft.TextAlign.CENTER),
+                       bgcolor=ft.colors.RED_100))
 
     page.update()
 
+
+def show_spare_balance(identified_user_login, page: ft.Page):
+    login = get_user()
+    information_balance = ''
+
+    if login is None:
+        login = "guest"
+        information_balance = "please sign in to use this function"
+    else:
+        balance = expenses_diary.get_balance_for_user(login)
+        currency = expenses_diary.get_currency_for_user(login)
+        if balance is None:
+            information_balance = "now no data about your balance"
+        else:
+            information_balance = (f"your spare balance is {balance} {currency}.\n"
+                                   f"This means that in general considering all your previous spare goals results up to this moment your spare progress looks like that...")
+    page.open(
+        ft.AlertDialog(title=ft.Text(f'Dear {login}, {information_balance}', text_align=ft.TextAlign.CENTER),
+                       bgcolor=ft.colors.GREEN_200))
+    page.update()

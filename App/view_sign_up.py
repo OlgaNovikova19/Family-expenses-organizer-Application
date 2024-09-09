@@ -1,6 +1,6 @@
 import flet as ft
 import time
-from identification_data import users, set_user, get_user
+from identification_data import set_user, get_user
 import expenses_diary
 
 
