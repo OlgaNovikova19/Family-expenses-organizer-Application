@@ -12,13 +12,12 @@
 
 Application that has following functionality:
 1) Selecting the category of expenses
-2) Selecting the subcategory of expenses in some cases
-3) Input of the sum of money spent. Input the date of the expenses.
-4) Specifying your goals for a selected period of time regarding sapring money
-5) Selecting the subjective level of your certainty of having your expenses in accordance with your spare goals specified before
-6) Creating charts for getting insights of the relationship between real expenses, the financial goals and the subjective feeling of going along with the spare goals during period of time selected for the goals.
-7) Creating charts for getting more insights in spending money for different purposes during selected period of time.
-8) Saving all the data typed in (dates, expenses, spare goals)
-9) Some encouraging an cheer-up messages during using the application to make it more interactive and pleasant to use.
-10) User-friendly design, especially for general functionalities - making selecting date posiible in several ways, making selecting categories of expenses and data input simple and quick to find and to fulfill.
-11) Possibility to make input for future planned expenses 
+2) Input of the sum of money spent. Input the date of the expenses.
+3) Specifying your goals for a selected period of time regarding sapring money
+4) Selecting the subjective level of your certainty of having your expenses in accordance with your spare goals specified before
+5) Creating charts for getting insights of the relationship between real expenses, the financial goals and the subjective feeling of going along with the spare goals during period of time selected for the goals.
+6) Creating charts for getting more insights in spending money for different purposes during selected period of time.
+7) Saving all the data typed in (dates, expenses, spare goals)
+8) Some encouraging an cheer-up messages during using the application to make it more interactive and pleasant to use.
+9) User-friendly design, especially for general functionalities - making selecting date posiible in several ways, making selecting categories of expenses and data input simple and quick to find and to fulfill.
+10) Possibility to make input for future planned expenses, previous expenses
