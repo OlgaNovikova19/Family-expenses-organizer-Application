@@ -15,7 +15,7 @@ def get_user():
 def set_chosen_date(passed_date):
     global chosen_date
     chosen_date = passed_date
-    print(chosen_date, 'chos/date')
+
 
 
 def get_chosen_date():

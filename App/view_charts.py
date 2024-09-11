@@ -77,13 +77,11 @@ def create_charts_layout(page: ft.Page):
         colors = [ft.colors.RED, ft.colors.GREEN, ft.colors.ORANGE, ft.colors.PURPLE, ft.colors.YELLOW,
                   ft.colors.LIME_800, ft.colors.BROWN, ft.colors.LIGHT_GREEN, ft.colors.INDIGO, ft.colors.PINK,
                   ft.colors.LIGHT_BLUE_50, ft.colors.CYAN, ft.colors.DEEP_PURPLE_900]
-        print("on_chart_event")
-        print(expenses_diary.check_expenses_for_user(get_user()))
+
         start_date = get_start_date_analysis(get_user())
         end_date = get_end_date_analysis(get_user())
         statistics_data = expenses_diary.categories_procent_for_period_for_chart(get_user(), start_date, end_date)
         if statistics_data:
-            print(statistics_data)
             set_current_statistics_data(get_user(), statistics_data)
             for key, val in statistics_data.items():
                 random_color = random.choice(colors)
@@ -96,7 +94,6 @@ def create_charts_layout(page: ft.Page):
         return chart
 
     def button_show_chart_clicked(ev):
-        print(get_user(), 'get_user() in chart show function')
         login_name = get_user()
         if login_name is None:
             create_individual_error_message(page, "Dear guest, please sign in to use this function")
@@ -121,12 +118,10 @@ def create_charts_layout(page: ft.Page):
             button_close_chart = ft.ElevatedButton('Close chart', on_click=close_chart_clicked)
 
             chart_data = get_current_statistics_data(get_user())
-            print(chart_data, 'chart data')
             text_chart = ""
             if chart_data is not None:
                 for key, value in chart_data.items():
                     text_chart += f"{key} : {int(value)}%\n"
-                    print(text_chart, 'text_chart')
             dialog_modal_chart = ft.AlertDialog(
                 modal=True,
                 title=ft.Text(f"Chart: period {get_start_date_analysis(get_user())} - {get_end_date_analysis(get_user)}\n\n{text_chart}"),
@@ -138,15 +133,11 @@ def create_charts_layout(page: ft.Page):
             page.open(dialog_modal_chart)
             page.update()
 
-            """page.views[-1].controls.append(make_chart())
-            page.update()"""
-
     button_show_chart = ft.ElevatedButton("Show chart", bgcolor=ft.colors.AMBER_200, on_click=button_show_chart_clicked)
 
     def create_start_date_button() -> ft.Control:
         def setting_start_date(ev):
             set_start_date_analysis(get_user(), ev.control.value.strftime('%Y-%m-%d'))
-            print('start_date_analysis', get_start_date_analysis(get_user()))
 
         pick_start_date_in_calendar = ft.DatePicker(
             first_date=datetime.datetime(year=2023, month=10, day=1),
@@ -169,10 +160,8 @@ def create_charts_layout(page: ft.Page):
     def create_end_date_button() -> ft.Control:
         def setting_end_date(ev):
             end_date_for_analysis = ev.control.value
-            print("ev.control.value end_date_for_analysis", end_date_for_analysis)
             start_date_str = get_start_date_analysis(get_user())
-            print(start_date_str, "start_date_str")
-            print(type(start_date_str), 'type start_date_str')
+
             if start_date_str is not None:
                 start_date_for_analysis = datetime.datetime.strptime(start_date_str, '%Y-%m-%d')
                 if start_date_for_analysis > end_date_for_analysis:
@@ -182,16 +171,13 @@ def create_charts_layout(page: ft.Page):
                     set_start_date_analysis(get_user(), end_date_for_analysis.strftime('%Y-%m-%d'))
                     set_end_date_analysis(get_user(), start_date_for_analysis)
                 else:
-                    print(end_date_for_analysis.strftime('%Y-%m-%d'), 'end_date_for_analysis.strftime')
-                    print(get_user(), 'get_user')
                     set_end_date_analysis(get_user(), end_date_for_analysis.strftime('%Y-%m-%d'))
-                    print('end_date_analysis else in if', get_end_date_analysis(get_user()))
             else:
                 create_individual_error_message(page,
                                                 "Select start date! Otherwise start date will be the day 7 days before!")
                 date_1_week_ago = end_date_for_analysis + datetime.timedelta(-7)
                 set_start_date_analysis(get_user(), date_1_week_ago.strftime('%Y-%m-%d'))
-            print('end_date_analysis', get_end_date_analysis(get_user()))
+
 
         pick_end_date_in_calendar = ft.DatePicker(
             first_date=datetime.datetime(year=2023, month=10, day=1),

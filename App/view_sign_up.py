@@ -2,39 +2,65 @@ import flet as ft
 import time
 from identification_data import set_user, get_user
 import expenses_diary
+from fabrique_controls import create_individual_error_message
+import logging
 
 
 
 
 def view_sign_up_controls(page: ft.Page):
     def validate_new_login(login: str):
+        logging.info("function called: validate_new_login(login: str)")
+        logging.info(f"login: {login}")
+        logging.info(f"len(login): {len(login)}")
         if isinstance(login, str) and 0 < len(login) < 10:
-            if login not in users:
-                return True
+            if login != "Your login":
+                if not expenses_diary.check_user_for_login(login):
+                    return True
+                else:
+                    create_individual_error_message(page, 'Select another login. This login is already used')
+                    return False
             else:
-                raise Exception('Select another login. This login is already used')
-        raise Exception('Type in another login. Login should be at least 1 symbol long and less than 10 symbols')
+                create_individual_error_message(page, 'Type in your login. The field for login should not be empty')
+                return False
+        else:
+            create_individual_error_message(page, 'Login should be at least 1 symbol long and less than 10 symbols long')
+            return False
 
 
     def validate_new_password(password: str):
+        logging.info("function called: validate_new_password(password: str)")
+        logging.info(f"password: {password}")
+        logging.info(f"len(password): {len(password)}")
         if isinstance(password, str) and 0 < len(password) < 10:
-            return True
-
-        raise Exception('Type in another login. Login should be at least 1 symbol long and less than 10 symbols')
+            if password != "Your password":
+                return True
+            else:
+                create_individual_error_message(page,
+                                                'Type in your password. The field for password should not be empty')
+                return False
+        else:
+            create_individual_error_message(page,
+                                            'Type in another password. Password should be at least 1 symbol long and less than 10 symbols long')
+            return False
 
     def validate_repeat_new_password(password: str):
+        logging.info("function called: validate_repeat_new_password(password: str)")
         if repeat_password_text_field.value == new_password_text_field.value:
             return True
-        raise Exception('Try one more time. It does`t match the password you`ve typed in previously')
+        create_individual_error_message(page,'Try one more time. It does`t match the password you`ve typed in previously')
+        return False
 
     def after_validation_actions(e):
-        #global identified_user
-
-
-        if expenses_diary.sign_up_set_new_user(new_login_text_field.value, new_password_text_field.value):
-            set_user(new_login_text_field.value)
-            #identified_user = new_login_text_field.value
-            print(get_user(), "identified_user")
+        logging.info("function called: after_validation_actions(e)")
+        check_valid_response_login = validation_new_password_login(new_login_text_field,new_login_text_field.value)
+        check_valid_response_password = validation_new_password_login(new_password_text_field, new_password_text_field.value)
+        check_valid_response_repeat_password = validation_new_password_login(repeat_password_text_field, repeat_password_text_field.value)
+        logging.info(f"check_valid_response_login: {check_valid_response_login}, check_valid_response_password: {check_valid_response_password},"
+                     f" check_valid_response_repeat_password: {check_valid_response_repeat_password}")
+        if check_valid_response_login and check_valid_response_password and check_valid_response_repeat_password:
+            expenses_diary.sign_up_set_new_user(new_login_text_field.value, new_password_text_field.value)
+            logging.info("function called: expenses_diary.sign_up_set_new_user(new_login_text_field.value, new_password_text_field.value)")
             page.views[-1].controls.append(ft.Row(
                 [ft.Text(f"Welcome, {new_login_text_field.value}!", italic=True, weight=ft.FontWeight.BOLD,
                          font_family="Consolas", size=35, color=ft.colors.AMBER)],
@@ -48,24 +74,27 @@ def view_sign_up_controls(page: ft.Page):
             time.sleep(3)
             page.go('/authentication')
         else:
-            page.open(
-                ft.AlertDialog(title=ft.Text('User with such login already exists'), bgcolor=ft.colors.RED_100))
             new_login_text_field.value = ''
             new_password_text_field.value = ''
-            repeat_password_text_field = ''
+            repeat_password_text_field.value = ''
             page.update()
 
 
 
     def validation_new_password_login(control: ft.control, user_input_str: str):
+        logging.info("function called: validation_new_password_login(control: ft.control, user_input_str: str)")
+        logging.info(f"control: {control}")
         if control == new_login_text_field:
             valid_val_login = validate_new_login(user_input_str)
+            logging.info(f"function called: validate_new_login(user_input_str), returned: valid_val_login: {valid_val_login}")
             if valid_val_login:
                 control.data = 1
                 return True
         elif control == new_password_text_field:
             if new_login_text_field.data == 1:
                 valid_val_password = validate_new_password(user_input_str)
+                logging.info(
+                    f"function called: validate_new_password(user_input_str), returned: valid_val_password: {valid_val_password}")
                 if valid_val_password:
                     new_password_text_field.data = 1
                     return True
@@ -74,8 +103,9 @@ def view_sign_up_controls(page: ft.Page):
         elif control == repeat_password_text_field:
             if new_password_text_field.data == 1:
                 valid_val_repeat_password = validate_repeat_new_password(user_input_str)
+                logging.info(
+                    f"function called: validate_repeat_new_password(user_input_str), returned: valid_val_repeat_password: {valid_val_repeat_password}")
                 if valid_val_repeat_password:
-                    print("lllllll")
                     new_login_text_field.data = 0
                     new_password_text_field.data = 0
                     return True
@@ -90,6 +120,7 @@ def view_sign_up_controls(page: ft.Page):
         page.update()
 
     def new_password_or_login_submit(e):
+        logging.info("function called: new_password_or_login_submit(e)")
         validation_response = validation_new_password_login(e.control, e.control.value)
         if validation_response:
             e.control.disabled = True

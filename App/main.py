@@ -4,17 +4,16 @@ from collections import deque
 import flet as ft
 import expenses_diary
 import calendar
-
 import view_charts
 import view_sign_in_sign_up_selection
 from view_sign_in import view_sign_in_layout_creation
 from view_goals import view_goals_create_layout, show_spare_balance
 from identification_data import get_user, set_chosen_date, get_chosen_date
 import view_goals
-
 from fabrique_controls import date_picker_creation, create_individual_error_message
 from expenses_input import basic_menu_creation
 import view_charts
+import logging
 
 
 def main(page: ft.Page):
@@ -24,6 +23,15 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.LIGHT
     page.theme = ft.Theme(color_scheme_seed="green")
     page.scroll = ft.ScrollMode.ALWAYS
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler('app.log'),  # Log to a file
+            logging.StreamHandler()  # Also print to console
+        ]
+    )
 
     #def create_app_bar():
 
@@ -50,10 +58,7 @@ def main(page: ft.Page):
             str_selected_date = e.control.value.strftime('%Y-%m-%d')
             page.add(ft.Text(f"Date selected: {str_selected_date}"))
             page.add(ft.TextButton(f"{str_selected_date}"))
-            print(str_selected_date, 'str_selected_date')
-            print(e.control.data, 'data..')
             set_chosen_date(str_selected_date)
-            print(get_chosen_date(), 'chosen_date')
             page.update()
 
         pick_date_in_calendar_ = ft.DatePicker(
@@ -62,9 +67,8 @@ def main(page: ft.Page):
             on_change=choose_date_
         )
 
-        print(get_chosen_date(), 'chosen_date')
-
-        calendar_icon_button = ft.IconButton(ft.icons.CALENDAR_MONTH, tooltip="Calendar", on_click=lambda e: page.open(pick_date_in_calendar_))
+        calendar_icon_button = ft.IconButton(ft.icons.CALENDAR_MONTH, tooltip="Calendar",
+                                             on_click=lambda e: page.open(pick_date_in_calendar_))
         return calendar_icon_button
 
     calendar_icon_button = date_picker_create()
@@ -78,15 +82,32 @@ def main(page: ft.Page):
         if name_user is None:
             name_user = 'guest'
             information = 'please sign in to use this function.'
-        if expenses_diary.check_active_limits_for_user(get_user()):
-            sum_left_before_warning_sum = expenses_diary.get_sum_left_to_spend_without_warning_for_user(name_user)
-            if sum_left_before_warning_sum is None:
-                information = 'you have set no warning sum.'
-            else:
-                currency = expenses_diary.get_currency_for_user(name_user)
-                information = f'you can freely spend {sum_left_before_warning_sum} {currency}'
         else:
-            information = 'no active limits, so you can freely spend as much as you want...really :-)'
+            if expenses_diary.check_active_limits_for_user(get_user()):
+                warning_sum = expenses_diary.get_warning_sum_from_active_limit_for_user(get_user())
+                start_date_active_limit = expenses_diary.get_active_limit_start_date_for_user(get_user())
+                end_date_active_limit = expenses_diary.get_active_limit_end_date_for_user(get_user())
+                sum_expenses = expenses_diary.get_sum_expenses_for_login_for_the_period(get_user(),
+                                                                                        start_date_active_limit,
+                                                                                        end_date_active_limit)
+                sum_limit_user = expenses_diary.get_active_sum_limit_for_user(get_user())
+                if warning_sum is None:
+                    warning_sum = sum_limit_user
+
+                sum_left_before_warning_sum = warning_sum - sum_expenses
+                currency = expenses_diary.get_currency_for_user(name_user)
+                if sum_left_before_warning_sum < 0:
+                    page.open(
+                        ft.AlertDialog(title=ft.Text(f'Dear {name_user}, you can`t spend money freely now.'),
+                                       bgcolor=ft.colors.RED_100))
+                    return
+                else:
+                    information = f'you can freely spend {sum_left_before_warning_sum} {currency}'
+
+            else:
+                information = (
+                    'no active limits at the current moment, so you can now freely spend as much as you want...really :-)\n'
+                    'However it will be wise to take into account your spare balance..It`s at the bottom of the page.')
         page.open(ft.AlertDialog(title=ft.Text(f'Dear {name_user}, {information}'), bgcolor=ft.colors.GREEN_200))
 
     goals_icon_button = ft.IconButton(ft.icons.ADJUST, tooltip="Goals", on_click=open_view_goals, data=0)
@@ -102,7 +123,6 @@ def main(page: ft.Page):
             else:
                 create_individual_error_message(page, 'Hmmm...but the light theme is already on...')
 
-
         def change_to_dark_theme(ev):
             if page.theme_mode == ft.ThemeMode.LIGHT:
                 page.theme_mode = ft.ThemeMode.DARK
@@ -116,7 +136,8 @@ def main(page: ft.Page):
                 create_individual_error_message(page, "Dear guest, please sign in to save your choice")
             else:
                 if expenses_diary.get_currency_for_user(login) == 'rubbles':
-                    create_individual_error_message(page, 'Hmmm...but you have already set rubbles as your chosen currency...')
+                    create_individual_error_message(page,
+                                                    'Hmmm...but you have already set rubbles as your chosen currency...')
                 else:
                     expenses_diary.set_currency_for_user("rubbles", login)
 
@@ -134,26 +155,31 @@ def main(page: ft.Page):
             else:
                 expenses_diary.set_currency_for_user("dollars", login)
 
-
         dlg_modal_settings = ft.AlertDialog(
             modal=True,
             title=ft.Text("Please choose your settings", text_align=ft.TextAlign.CENTER),
             content=ft.Text("And your choice is...", italic=True, weight=ft.FontWeight.W_600, size=20),
             actions=[ft.Column([
                 ft.Row([
-                    ft.ElevatedButton("Light theme", on_click=change_to_light_theme, bgcolor=ft.colors.AMBER_200, height=30),
-                    ft.ElevatedButton("Dark theme", on_click=change_to_dark_theme, bgcolor=ft.colors.AMBER_200, height=30)], alignment=ft.MainAxisAlignment.CENTER),
+                    ft.ElevatedButton("Light theme", on_click=change_to_light_theme, bgcolor=ft.colors.AMBER_200,
+                                      height=30),
+                    ft.ElevatedButton("Dark theme", on_click=change_to_dark_theme, bgcolor=ft.colors.AMBER_200,
+                                      height=30)], alignment=ft.MainAxisAlignment.CENTER),
                 ft.Row([
-                    ft.ElevatedButton("Currency: rubbles", on_click=change_currency_to_rubbles, bgcolor=ft.colors.AMBER_300, height=30),
-                    ft.ElevatedButton("Currency: euro", on_click=change_currency_to_euro, bgcolor=ft.colors.AMBER_300, height=30),
-                    ft.ElevatedButton("Currency: dollars", on_click=change_currency_to_dollars, bgcolor=ft.colors.AMBER_300, height=30)], alignment=ft.MainAxisAlignment.CENTER
+                    ft.ElevatedButton("Currency: rubbles", on_click=change_currency_to_rubbles,
+                                      bgcolor=ft.colors.AMBER_300, height=30),
+                    ft.ElevatedButton("Currency: euro", on_click=change_currency_to_euro, bgcolor=ft.colors.AMBER_300,
+                                      height=30),
+                    ft.ElevatedButton("Currency: dollars", on_click=change_currency_to_dollars,
+                                      bgcolor=ft.colors.AMBER_300, height=30)], alignment=ft.MainAxisAlignment.CENTER
                 ),
                 ft.Row([
-                    ft.ElevatedButton("CLOSE SETTINGS", on_click=lambda _:page.close(dlg_modal_settings),
+                    ft.ElevatedButton("CLOSE SETTINGS", on_click=lambda _: page.close(dlg_modal_settings),
                                       bgcolor=ft.colors.RED_100, height=30)], alignment=ft.MainAxisAlignment.CENTER)
-                ], alignment=ft.MainAxisAlignment.SPACE_AROUND)
+            ], alignment=ft.MainAxisAlignment.SPACE_AROUND)
             ],
-            actions_alignment=ft.MainAxisAlignment.SPACE_BETWEEN, shape=ft.RoundedRectangleBorder(radius=70.0), bgcolor=ft.colors.LIGHT_GREEN_ACCENT_100)
+            actions_alignment=ft.MainAxisAlignment.SPACE_BETWEEN, shape=ft.RoundedRectangleBorder(radius=70.0),
+            bgcolor=ft.colors.LIGHT_GREEN_ACCENT_100)
 
         page.open(dlg_modal_settings)
 
@@ -175,10 +201,10 @@ def main(page: ft.Page):
     page.update()
 
     def clicked_balance_icon_button(e):
-       show_spare_balance(get_user(), page)
+        show_spare_balance(get_user(), page)
 
     balance_icon_button = ft.IconButton(icon=ft.icons.SAVINGS, tooltip="Spare Balance",
-                  on_click=clicked_balance_icon_button)
+                                        on_click=clicked_balance_icon_button)
 
     def route_change(e: ft.RouteChangeEvent):
         page.views.clear()
@@ -187,16 +213,6 @@ def main(page: ft.Page):
         )
 
         if page.route == "/authentication":
-            '''page.views.append(
-                ft.View(route='/authentication',
-                        controls=[ft.AppBar(leading=ft.Icon(ft.icons.SAVINGS), leading_width=60,
-                            title=ft.Text("Family expenses organizer"), bgcolor=ft.colors.SURFACE_VARIANT,
-                            actions=[ft.IconButton(icon=ft.icons.ARROW_LEFT, tooltip="Go to Sign In/Sign Up",on_click=lambda _: page.go('/')),
-                                    ft.IconButton(icon=ft.icons.ARROW_RIGHT, tooltip="Go to App without authentication",on_click=lambda _: page.go('/app'))]),
-                                ft.Text("Type in your authentication data"),
-                                ft.TextField("Name")
-                                ]))'''
-
             page.views.append(
                 ft.View(route='/authentication',
                         controls=view_sign_in_layout_creation(page)))
@@ -207,16 +223,16 @@ def main(page: ft.Page):
                                                 #main_category_selection_col,
                                                 basic_menu_creation(page),
                                                 ft.BottomAppBar(content=ft.Row(
-                                                    controls=[ft.IconButton(icon = ft.icons.PIE_CHART, tooltip="Charts",
-                                                                      on_click=lambda _: page.go('/third_page')),
-                                                        ft.IconButton(icon=ft.icons.ARROW_LEFT,
-                                                                      tooltip="Back to Authentication",
-                                                                      on_click=lambda _: page.go('/')),
-                                                        ft.IconButton(icon=ft.icons.ARROW_RIGHT,
-                                                                      tooltip="Go to ThirdPage",
-                                                                      on_click=lambda _: page.go('/third_page')),
+                                                    controls=[ft.IconButton(icon=ft.icons.PIE_CHART, tooltip="Charts",
+                                                                            on_click=lambda _: page.go('/third_page')),
+                                                              ft.IconButton(icon=ft.icons.ARROW_LEFT,
+                                                                            tooltip="Back to Authentication",
+                                                                            on_click=lambda _: page.go('/')),
+                                                              ft.IconButton(icon=ft.icons.ARROW_RIGHT,
+                                                                            tooltip="Go to ThirdPage",
+                                                                            on_click=lambda _: page.go('/third_page')),
                                                               balance_icon_button
-                                                    ], alignment=ft.MainAxisAlignment.CENTER
+                                                              ], alignment=ft.MainAxisAlignment.CENTER
                                                 ))
                                                 ]))
 
@@ -226,7 +242,8 @@ def main(page: ft.Page):
                     route="/third_page",
                     controls=[
                         ft.AppBar(title=ft.Text("Charts"), bgcolor=ft.colors.SURFACE_VARIANT),
-                        ft.Text("Select period of time you are interested in and press SHOW CHART button", italic=True, weight = ft.FontWeight.W_600, size=18),
+                        ft.Text("Select period of time you are interested in and press SHOW CHART button", italic=True,
+                                weight=ft.FontWeight.W_600, size=18),
                         view_charts.create_charts_layout(page)
                     ]
                 )
@@ -244,7 +261,6 @@ def main(page: ft.Page):
     page.on_view_pop = view_pop
     page.go(page.route)
     page.update()
-    print(page.views, "VIEWS")
 
     img_obj = ft.Image(
         src=f"piggy-bank-with-stacks-coins.jpg",
@@ -262,7 +278,6 @@ def main(page: ft.Page):
     dates_deque = deque([], maxlen=max_visible_dates_in_row)
     current_date = datetime.date.today()
     center_date = current_date
-    regulator = 1
 
     start_calendar = datetime.date.today() - datetime.timedelta(days=30)
     end_calendar = datetime.date.today() + datetime.timedelta(days=30)
@@ -275,21 +290,17 @@ def main(page: ft.Page):
         chosen_row_date = datetime.datetime.strptime(chosen_row_date_str, "%B %d %Y")
         chosen_row_date_formatted_str = chosen_row_date.strftime("%Y-%m-%d")
         set_chosen_date(chosen_row_date_formatted_str)
-        print(get_chosen_date())
+
 
     def generate_dates_around(center_date_):
         next_date = center_date_
-        print(next_date, 'next_date')
         for i in range(-4, 4):
             next_date = center_date_ + datetime.timedelta(days=i)
-            print(i, next_date)
             yield next_date
             dates_deque.append(next_date)
-            print(dates_deque)
 
     def generate_buttons():
         nonlocal center_date
-        print(center_date, 'center_date')
         current_date_ = start_calendar
         while current_date_ < end_calendar:
             text_upper = ft.Text(value=current_date_.strftime("%B"), size=20)

@@ -24,7 +24,7 @@ def view_sign_in_sign_up(page: ft.Page):
                                        title=ft.Text("Family expenses organizer"), bgcolor=ft.colors.SURFACE_VARIANT,
                                        actions=[ft.IconButton(icon=ft.icons.ARROW_RIGHT,
                                                               tooltip="Go to App without authentication",
-                                                              on_click=lambda _: page.go('/authentication'))])
+                                                              on_click=lambda _: page.go('/app'))])
 
     row_sing_in_sign_up_elev_buttons = ft.Row(
         [ft.ElevatedButton("Sign In", bgcolor=ft.colors.AMBER_200, on_click=lambda _: page.go('/authentication')),
