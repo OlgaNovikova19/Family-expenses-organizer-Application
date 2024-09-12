@@ -1,6 +1,7 @@
 import flet as ft
 import datetime
-from identification_data import get_chosen_date, set_chosen_date
+import expenses_diary
+from identification_data import get_chosen_date, set_chosen_date, get_user
 
 
 def create_sum_input_unit(page: ft.Page):
@@ -13,9 +14,10 @@ def create_sum_input_unit(page: ft.Page):
         page.update()
 
     def change_text_field_input_sum(e):
+        currency = expenses_diary.get_currency_for_user(get_user())
         if validate_sum_input():
             text_field_input_sum.prefix_text = 'Limit I want to set...'
-            text_field_input_sum.suffix_text = 'rubbles'
+            text_field_input_sum.suffix_text = currency
             text_field_input_sum.hint_text = ""
             text_field_input_sum.error_text = ""
             page.update()

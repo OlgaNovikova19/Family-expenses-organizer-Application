@@ -47,6 +47,11 @@ def main(page: ft.Page):
         date_today_min_1day = datetime.datetime.now() + datetime.timedelta(days=date_appbar.data)
         date_appbar.value = date_today_min_1day.strftime("%a") + ", " + date_today_min_1day.strftime(
             "%d") + " " + date_today_min_1day.strftime("%b")
+        for control in page.views[-1].controls:
+            if isinstance(control, ft.Text) and control.value.startswith("Selected"):
+                page.views[-1].controls.remove(control)
+                break
+        page.views[-1].controls.append(ft.Text(f"Selected {date_today_min_1day.strftime('%Y-%m-%d')}"))
         page.update()
 
     def open_view_goals(e):
@@ -143,20 +148,39 @@ def main(page: ft.Page):
                                                     'Hmmm...but you have already set rubbles as your chosen currency...')
                 else:
                     expenses_diary.set_currency_for_user("rubbles", login)
+                    page.open(ft.AlertDialog(title=ft.Text("Your currency was successfully changed to rubbles", text_align=ft.TextAlign.CENTER),
+                                             bgcolor=ft.colors.GREEN_200))
+                    page.update()
 
         def change_currency_to_euro(ev):
             login = get_user()
             if login is None:
                 create_individual_error_message(page, "Dear guest, please sign in to save your choice")
             else:
-                expenses_diary.set_currency_for_user("euro", login)
+                if expenses_diary.get_currency_for_user(login) == 'euro':
+                    create_individual_error_message(page,
+                                                    'Hmmm...but you have already set euro as your chosen currency...')
+                else:
+                    expenses_diary.set_currency_for_user("euro", login)
+                    page.open(ft.AlertDialog(
+                        title=ft.Text("Your currency was successfully changed to euro", text_align=ft.TextAlign.CENTER),
+                        bgcolor=ft.colors.GREEN_200))
+                page.update()
 
         def change_currency_to_dollars(ev):
             login = get_user()
             if login is None:
                 create_individual_error_message(page, "Dear guest, please sign in to save your choice")
             else:
-                expenses_diary.set_currency_for_user("dollars", login)
+                if expenses_diary.get_currency_for_user(login) == 'dollars':
+                    create_individual_error_message(page,
+                                                    'Hmmm...but you have already set dollars as your chosen currency...')
+                else:
+                    expenses_diary.set_currency_for_user("dollars", login)
+                    page.open(ft.AlertDialog(
+                    title=ft.Text("Your currency was successfully changed to dollars", text_align=ft.TextAlign.CENTER),
+                    bgcolor=ft.colors.GREEN_200))
+                page.update()
 
         dlg_modal_settings = ft.AlertDialog(
             modal=True,

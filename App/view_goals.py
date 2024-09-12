@@ -191,7 +191,10 @@ def view_goals_create_layout(page: ft.Page):
                     logging.info('function called confirmation_button_clicked(ev)')
                     logging.info(f'text_field_input_warning_sum.value: {text_field_input_warning_sum.value}')
                     logging.info(f"text_field_input_sum.value: {text_field_input_sum.value}")
-                    if text_field_input_warning_sum.value >= text_field_input_sum.value:
+                    if float(text_field_input_warning_sum.value) >= float(text_field_input_sum.value):
+                        print(text_field_input_warning_sum.value >= text_field_input_sum.value)
+                        print(f'text_field_input_warning_sum.value: {text_field_input_warning_sum.value}')
+                        print(f'text_field_input_sum.value: {text_field_input_sum.value}')
                         actions_if_warning_sum_more_or_equal_than_limit(text_field_input_warning_sum)
                         logging.info('function called: actions_if_warning_sum_more_or_equal_than_limit(text_field_input_warning_sum)')
                     else:
