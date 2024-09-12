@@ -132,6 +132,7 @@ def view_goals_create_layout(page: ft.Page):
                             for i in date:
                                 expenses_diary.update_not_active_limit_for_user_when_expense(get_user(), i)
                                 logging.info('function called expenses_diary.update_not_active_limit_for_user_when_expense(get_user(), i)')
+
                     else:
                         expenses_diary.make_limit_history_for_user(get_user(), 0, 0, 0, 0)
                         logging.info(
@@ -144,7 +145,6 @@ def view_goals_create_layout(page: ft.Page):
                 set_new_limit()
                 logging.info(
                     'function called: set_new_limit()')
-                end_actions()
                 logging.info(
                     'function called: end_actions()')
                 page.update()
@@ -170,7 +170,7 @@ def view_goals_create_layout(page: ft.Page):
         page.views[-1].controls.append(col_checkboxes_if_limit_already_exists)
         page.update()
 
-    #########
+
 
     def ask_set_warning_sum():
         logging.info('function called ask_set_warning_sum()')
@@ -209,7 +209,8 @@ def view_goals_create_layout(page: ft.Page):
                         checkbox_no.disabled = True
                     text_field_input_warning_sum.disabled = True
 
-                page.views[-1].controls.append(ft.ElevatedButton("Confirmation", on_click=confirmation_button_clicked))
+                confirm_button = ft.ElevatedButton("Confirmation", on_click=confirmation_button_clicked)
+                page.views[-1].controls.append(confirm_button)
                 page.update()
             else:
                 end_actions()
@@ -235,6 +236,7 @@ def view_goals_create_layout(page: ft.Page):
 
         page.views[-1].controls.append(col_variants)
         page.update()
+
 
     def actions_if_warning_sum_more_or_equal_than_limit(text_field_input_warning_sum):
         logging.info(
@@ -307,6 +309,7 @@ def view_goals_create_layout(page: ft.Page):
         page.update()
 
 
+
     def set_new_limit():
         logging.info(
             'function called: set_new_limit()')
@@ -331,7 +334,7 @@ def view_goals_create_layout(page: ft.Page):
             end_dates_all_limits = expenses_diary.get_all_limits_end_dates_for_user(get_user()) or []
             logging.info(
                 f'function called expenses_diary.get_all_limits_end_dates_for_user(get_user()) and returned end_dates_all_limits: {end_dates_all_limits}')
-            #check if limit with such dates already exists
+            # check if limit with such dates already exists
             if (chosen_start_day_limit,) in start_dates_all_limits and (limit_future_date,) in end_dates_all_limits:
                 column_search_bar.disabled = False
                 sum_input_plus_textfield_min_row.disabled = False
@@ -339,7 +342,7 @@ def view_goals_create_layout(page: ft.Page):
                                                 "Limit with such dates already exists. It won`t be saved once again.")
 
                 return
-            #check if active limit already exists. Active limit is the latest limit with history = 0.
+            # check if active limit already exists. Active limit is the latest limit with history = 0.
             check_response = expenses_diary.check_active_limits_for_user(get_user())
             logging.info(
                 f'function called expenses_diary.check_active_limits_for_user(get_user()) and returned check_response: {check_response}')
@@ -358,18 +361,24 @@ def view_goals_create_layout(page: ft.Page):
                     page.update()
                     questions_if_limit_already_exists()
                     logging.info(f'function called: questions_if_limit_already_exists()')
+                    return
+
                 else:
                     history = 1
                     message_limit_already_exists_add_history_limit = ft.Text(
                         "You have already another active limit installed.\n"
                         "Limit you want to set now can`t be an active one, as its period has already passed by.\n"
-                        "It will be added as non-active limit. You can still add expenses and get statistical insights for your newly set period.", text_align=ft.TextAlign.CENTER,
+                        "It will be added as non-active limit. You can still add expenses and get statistical insights for your newly set period.",
+                        text_align=ft.TextAlign.CENTER,
                         italic=True, weight=ft.FontWeight.BOLD,
                         font_family="Consolas", size=20)
-                    row_message_add_history_limit = ft.Row([message_limit_already_exists_add_history_limit], alignment=ft.MainAxisAlignment.CENTER,
-                                         vertical_alignment=ft.CrossAxisAlignment.START)
+                    row_message_add_history_limit = ft.Row([message_limit_already_exists_add_history_limit],
+                                                           alignment=ft.MainAxisAlignment.CENTER,
+                                                           vertical_alignment=ft.CrossAxisAlignment.START)
                     page.views[-1].controls.append(row_message_add_history_limit)
                     page.update()
+
+
 
             warning_sum = None
             currency = expenses_diary.get_currency_for_user(get_user())
@@ -379,7 +388,7 @@ def view_goals_create_layout(page: ft.Page):
 
             logging.info(
                 f'get_user(): {get_user()}, chosen_start_day_limit: {chosen_start_day_limit}, limit_future_date: {limit_future_date}, '
-                f'text_field_input_sum.value: {text_field_input_sum.value}, warning_sum: {warning_sum}, history: {history}')
+                f'text_field_input_sum.value: {text_field_input_sum.value}, warning_sum: {warning_sum}')
             logging.info(
                 f'function called: expenses_diary.add_active_limit(get_user(),'
                 f' chosen_start_day_limit, limit_future_date, text_field_input_sum.value, warning_sum, history)')
@@ -505,7 +514,7 @@ def create_warning(identified_user):
             #create a warning
         else:
             if warning_sum_for_user > limit_sum_for_user:
-                sum_to_spend_beyond_warning = 0
+                sum_to_spend_beyond_warning = limit_sum_for_user
             else:
                 sum_to_spend_beyond_warning = limit_sum_for_user - warning_sum_for_user
 

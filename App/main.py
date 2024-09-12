@@ -56,9 +56,12 @@ def main(page: ft.Page):
     def date_picker_create() -> ft.Control:
         def choose_date_(e):
             str_selected_date = e.control.value.strftime('%Y-%m-%d')
-            page.add(ft.Text(f"Date selected: {str_selected_date}"))
-            page.add(ft.TextButton(f"{str_selected_date}"))
+            for control in page.views[-1].controls:
+                if isinstance(control, ft.Text) and control.value.startswith("Selected"):
+                    page.views[-1].controls.remove(control)
+                    break
             set_chosen_date(str_selected_date)
+            page.views[-1].controls.append(ft.Text(f"Selected: {get_chosen_date()}"))
             page.update()
 
         pick_date_in_calendar_ = ft.DatePicker(
@@ -290,6 +293,12 @@ def main(page: ft.Page):
         chosen_row_date = datetime.datetime.strptime(chosen_row_date_str, "%B %d %Y")
         chosen_row_date_formatted_str = chosen_row_date.strftime("%Y-%m-%d")
         set_chosen_date(chosen_row_date_formatted_str)
+        for control in page.views[-1].controls:
+            if isinstance(control, ft.Text) and control.value.startswith("Selected"):
+                page.views[-1].controls.remove(control)
+                break
+        page.views[-1].controls.append(ft.Text(f"Selected: {get_chosen_date()}"))
+        page.update()
 
 
     def generate_dates_around(center_date_):

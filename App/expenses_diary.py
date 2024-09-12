@@ -356,11 +356,9 @@ def make_limit_history_for_user(identified_user, expenses, diff_limit_all_real_e
 
         def update_balance():
             prev_balance = get_balance_for_user(identified_user)
-            if diff_limit_all_real_expenses > 0:
+            if diff_limit_all_real_expenses is not None and expenses is not None:
                 new_balance = prev_balance + diff_limit_all_real_expenses
-            else:
-                new_balance = prev_balance - expenses
-            set_balance_for_user(new_balance, identified_user)
+                set_balance_for_user(new_balance, identified_user)
 
         update_balance()
     return
@@ -380,14 +378,11 @@ def update_limit_by_id(id_, identified_user, expenses, diff_limit_all_real_expen
 
     def update_balance(login):
         prev_balance = get_balance_for_user(login)
-        if diff_limit_all_real_expenses > 0:
-            new_balance = prev_balance + diff_limit_all_real_expenses
-        else:
-            new_balance = prev_balance - expenses
-
+        new_balance = prev_balance + diff_limit_all_real_expenses
         set_balance_for_user(new_balance, login)
 
-    update_balance(identified_user)
+    if diff_limit_all_real_expenses is not None:
+        update_balance(identified_user)
 
 
 def calculate_mean_subjective_success_rate(login, start_date, end_date):
@@ -490,20 +485,6 @@ def get_warning_sum_from_active_limit_for_user(identified_user):
         return warning_sum[0]
     return
 
-
-def get_active_limit_sum_for_user(identified_user):
-    check_response = check_active_limits_for_user(identified_user)
-    if check_response:
-        conn1 = sqlite3.connect('finance.db')
-        c1 = conn1.cursor()
-        c1.execute(
-            "SELECT sum_limit FROM limits WHERE login = ? AND history = 0 ORDER BY limit_start_date DESC LIMIT 1",
-            (identified_user,)
-        )
-        sum_limit = c1.fetchone()
-        conn1.close()
-        return sum_limit[0]
-    return
 
 
 def get_active_sum_limit_for_user(identified_user):

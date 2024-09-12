@@ -130,10 +130,16 @@ def create_individual_error_message(page: ft.Page, message: str) -> None:
 
 def create_calendar_button(page: ft.Page) -> ft.Control:
     def choose_date(e):
+        text_date_inform = ft.Text(f"Selected {get_chosen_date()}")
+        for control in page.views[-1].controls:
+            if isinstance(control, ft.Text) and control.value.startswith("Selected"):
+                page.views[-1].controls.remove(control)
+                break
         str_selected_date = e.control.value.strftime('%Y-%m-%d')
-        page.add(ft.Text(f"Date selected: {str_selected_date}"))
-        page.add(ft.TextButton(f"{str_selected_date}"))
         set_chosen_date(str_selected_date)
+        text_date_inform = ft.Text(f"Selected {get_chosen_date()}")
+        page.views[-1].controls.append(text_date_inform)
+        page.update()
         page.update()
 
     pick_date_in_calendar = ft.DatePicker(
@@ -142,11 +148,12 @@ def create_calendar_button(page: ft.Page) -> ft.Control:
         on_change=choose_date
     )
 
+
     calendar_elev_button = ft.ElevatedButton(
         "Select date",
         icon=ft.icons.CALENDAR_MONTH,
         bgcolor=ft.colors.AMBER_200,
-        on_click=lambda e: page.open(
+        on_click=lambda _:page.open(
             pick_date_in_calendar
         )
     )
